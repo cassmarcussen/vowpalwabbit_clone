@@ -4,17 +4,49 @@
 
 #include <cmath>
 #include <cctype>
+#include <future>
+#include <thread>
+#include <chrono>
 #include "parse_example.h"
 #include "hash.h"
 #include "unique_sort.h"
 #include "global_data.h"
 #include "constant.h"
 #include "vw_string_view.h"
+#include "io_to_queue.h"
+
+class IO_Item;
 
 size_t read_features(vw* all, char*& line, size_t& num_chars)
 {
-  line = nullptr;
-  size_t num_chars_initial = readto(*(all->p->input), line, '\n');
+ 
+  IO_Item result;
+
+  while(true){
+
+    if(added_io()){
+      break;
+    }
+
+    result = pop_io_queue(true);
+
+    if(result.message.compare("bad") != 0){
+      break;
+    }
+
+    if(result.numCharsInit > 0){
+      break;
+    }
+
+  }
+
+  std::string result_string =  result.message;
+
+  line = new char[result_string.size() + 1];
+  strcpy(line, result_string.c_str());
+
+  size_t num_chars_initial = result.numCharsInit;
+
   if (num_chars_initial < 1)
     return num_chars_initial;
   num_chars = num_chars_initial;
@@ -34,7 +66,9 @@ int read_features_string(vw* all, v_array<example*>& examples)
 {
   char* line;
   size_t num_chars;
+
   size_t num_chars_initial = read_features(all, line, num_chars);
+
   if (num_chars_initial < 1)
     return (int)num_chars_initial;
 
