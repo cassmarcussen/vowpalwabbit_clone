@@ -5,6 +5,10 @@
 #pragma once
 
 #include <functional>
+#include <thread>
+#include <future>
+#include <mutex>  
+#include "io_to_queue.h"
 
 using dispatch_fptr = std::function<void(vw&, const v_array<example*>&)>;
 
@@ -15,9 +19,22 @@ inline void parse_dispatch(vw& all, dispatch_fptr dispatch)
 
   try
   {
+
+    std::queue<IO_Item> *io_lines = new std::queue<IO_Item>;
+
+    std::thread io_queue_th([&all, &io_lines]() 
+        {
+            io_lines_toqueue(&all, io_lines);
+
+        });
+
+    pop_io_queue(false);
+
     while (!all.p->done)
     {
+
       examples.push_back(&VW::get_unused_example(&all));  // need at least 1 example
+
       if (!all.do_reset_source && example_number != all.pass_length && all.max_examples > example_number &&
           all.p->reader(&all, examples) > 0)
       {
@@ -49,7 +66,11 @@ inline void parse_dispatch(vw& all, dispatch_fptr dispatch)
 
       examples.clear();
     }
+
+    io_queue_th.join();
+
   }
+  
   catch (VW::vw_exception& e)
   {
     std::cerr << "vw example #" << example_number << "(" << e.Filename() << ":" << e.LineNumber() << "): " << e.what()
@@ -67,4 +88,5 @@ inline void parse_dispatch(vw& all, dispatch_fptr dispatch)
   }
   lock_done(*all.p);
   examples.delete_v();
+
 }
