@@ -65,19 +65,19 @@ static bool called_i_l_t = false;
 static bool have_added_io = false;
 static bool done_with_io = false;
 
-inline void io_lines_toqueue(vw *all, std::queue<IO_Item> *input_lines){
+inline void io_lines_toqueue(vw& all, std::queue<IO_Item> *input_lines){
 
-  //lock -- results in error reduction, but gets rid of ability to access input_lines before the function finishes
+ //lock -- results in error reduction, but gets rid of ability to access input_lines before the function finishes
   std::lock_guard<std::mutex> lck(_mutex_io);
 
-  parser *original_p = all->p;
+  parser *original_p = all.p;
   
   char* line = nullptr;
 
   while(true)
   {
 
-    size_t num_chars_initial = readto(*(all->p->input), line, '\n');
+    size_t num_chars_initial = readto(*(all.p->input), line, '\n');
    
     if(num_chars_initial < 1 || strlen(line) < 1){
         called_i_l_t = true;
@@ -90,13 +90,13 @@ inline void io_lines_toqueue(vw *all, std::queue<IO_Item> *input_lines){
     input_lines->push(line_item);
     input_lines_copy->push(line_item);
 
-
     called_i_l_t = true;
     have_added_io = true;
 
   }
 
-  all->p = original_p;
+  all.p = original_p;
+
   done_with_io = true;
 
 }
